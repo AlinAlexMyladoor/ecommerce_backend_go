@@ -1,0 +1,79 @@
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ecommerce
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rmq
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_ERLANG_COOKIE: ecommerce-rabbitmq-cookie
+    ports:
+      - "5672:5672"   # The port Go uses to send messages
+      - "15672:15672" # The port for the Visual Dashboard UI
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 5s
+      timeout: 10s
+      retries: 5
+  typesense:
+      image: typesense/typesense:0.25.2
+      container_name: ts
+      ports:
+      - "8108:8108"
+      volumes:
+      - ./typesense-data:/data
+      command: '--data-dir /data --api-key=super-secret-key --enable-cors'
+
+  backend:
+    build: .
+    container_name: my-go-app
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: ecommerce
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      GIN_MODE: release
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  rabbitmqdata:

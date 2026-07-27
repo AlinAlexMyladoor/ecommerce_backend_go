@@ -1,26 +1,43 @@
 package Databse
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/AlinAlexMyladoor/ecommerce-backend/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-// Global DB variable (Exported)
+//env var like use case,os.getenv
 var DB *gorm.DB
 
 func InitDB() {
-	// Moved your connection string here
-	dsn := "host=localhost user=postgres password=postgres dbname=ecommerce port=5432 sslmode=disable"
+
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+	port := os.Getenv("DB_PORT")
+
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		host, user, password, dbname, port,
+	)
+
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// AutoMigrate both Product and User
-	DB.AutoMigrate(&models.Product{}, &models.User{}, &models.CartItem{}, &models.Order{}, &models.Order_item{})
+	DB.AutoMigrate(
+		&models.Product{},
+		&models.User{},
+		&models.CartItem{},
+		&models.Order{},
+		&models.Order_item{},
+	)
+
 	log.Println("Database connected and migrated!")
 }

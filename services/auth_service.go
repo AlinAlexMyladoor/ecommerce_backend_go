@@ -30,7 +30,7 @@ func (s *AuthService) Login(email string, password string) (string, error) {
 	}
 
 	// 3️⃣ Generate JWT
-	token, err := utils.Generatetoken(user.ID, user.Role)
+	token, err := utils.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return "", err
 	}
